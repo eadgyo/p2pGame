@@ -13,3 +13,9 @@ class Multiplayer:
 
 	def handleObjectAdded(self):
 		pass
+
+	def handleNetworksEvents(self):
+		pass
+
+	def handleGameEvents(self):
+		pass

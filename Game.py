@@ -1,14 +1,44 @@
-import Multiplayer
-class game:
+from Multiplayer import Multiplayer
+from Graphics import Graphics
+from Inputs import Inputs
+from time import time
+import pygame
+
+class Game:
     def __init__(self):
         self.multiplayer = Multiplayer()
+        self.graphics = Graphics()
+        self.inputs = Inputs()
 
-    def init(self):
-        pass
+        self.isGameRunning = False
+
+        self.DEFAULT_WIDTH = 800
+        self.DEFAULT_HEIGHT = 600
+        self.DT_RUNNING = 0.25
+
+    def start(self):
+        self.graphics.createWindow(self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT)
+        self.isGameRunning = True
+
+        t = time()
+        while self.isGameRunning:
+            dt, t = self.getDt(t)
+            self.run(dt)
+            self.sleep(dt)
+
+    def sleep(self, t):
+        startTime = time()
+        while time() - startTime < t:
+            time.sleep(10)
+
+    def getDt(self, lastTime):
+        t = time()
+        dt = t - lastTime
+        return dt, t
 
     def updateMultiplayer(self):
         # Handle networks events
-        self.multiplayer.handlNetworksEvents()
+        self.multiplayer.handleNetworksEvents()
 
         # Multiplayer synchro
         self.multiplayer.handleGameEvents()
@@ -16,19 +46,32 @@ class game:
     def updateIA(self):
         pass
 
-    def updateInputs(self):
+    def handleInputs(self):
         # Get keyboard inputs
+        actionKeys = self.inputs.update()
 
         # Create action
+        for (actionType, obj) in actionKeys:
+            if actionType == pygame.QUIT:
+                self.isGameRunning = False
 
         # Save action
         pass
 
+    def display(self):
+        pass
+
     def update(self, dt):
         self.updateMultiplayer()
+        self.updateIA(dt)
+
+    def run(self, dt):
+        self.update(self, dt)
         self.display()
-        self.updateIA()
-        self.updateInputs()
+        self.handleInputs()
+
+
+
 """
 // Definition du jeu:
 Sur une carte, il y a un ensemble de personnes.
