@@ -42,7 +42,7 @@ class Server:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((ip, port))
         msg = pickle.loads(client.recv(1024))
-        if msg.type == Message.JOIN:
+        if msg.type == Message.CONNECT:
             print(msg.data)
         self.addClient(client)
 
@@ -58,8 +58,8 @@ class Server:
             newclient, addr = connection.accept()
             print("New connection from : {}".format(str(addr)))
             for client in self.clients:
-                self.sendMessage(client, Message.JOIN, addr)
-            self.sendMessage(newclient, Message.JOIN, 'OK')
+                self.sendMessage(client, Message.CONNECT, addr)
+            self.sendMessage(newclient, Message.CONNECT, 'OK')
             self.addClient(newclient)
 
     def handleMessages(self):
