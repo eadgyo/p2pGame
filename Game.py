@@ -1,42 +1,55 @@
 from Multiplayer import Multiplayer
 from Graphics import Graphics
 from Inputs import Inputs
+from MData import MData
 import time
 import pygame
 
 class Game:
     def __init__(self):
         self.multiplayer = Multiplayer()
+        self.mdata = MData()
         self.graphics = Graphics()
         self.inputs = Inputs()
 
         self.isGameRunning = False
 
-        self.DEFAULT_WIDTH = 800
-        self.DEFAULT_HEIGHT = 600
-        self.DT_RUNNING = 0.25
+        self.WIDTH = 800
+        self.HEIGHT = 600
+        self.DT_RUNNING = 13
+        self.MOVE = 4
+        self.FIRING_TIME = 0.1
+
+        self.test()
+
+    def test(self):
+        persons = self.mdata.createPersons(0, 10, self.WIDTH, self.HEIGHT)
+        self.mdata.persons += persons
+        self.mdata.myPerson = self.mdata.persons[0]
 
     def start(self):
-        self.graphics.createWindow(self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT)
+        self.graphics.createWindow(self.WIDTH, self.HEIGHT)
         self.isGameRunning = True
 
         t = time.time()
         while self.isGameRunning:
             dt, t = self.getDt(t)
             self.run(dt)
-            self.sleep(dt)
+            self.sleepTo(t + dt)
 
-    def sleep(self, t):
-        startTime = time.time()
-        while time.time() - startTime < t:
-            time.sleep(0.001)
+    def sleepTo(self, t):
+        while t - time.time() > 0:
+            pass
+            #time.sleep(0.001)
 
     def getDt(self, lastTime):
         t = time.time()
         dt = t - lastTime
         return dt, t
 
-    def updateMultiplayer(self):
+    def updateMultiplayer(self, dt):
+        self.mdata.update(dt)
+
         # Handle networks events
         self.multiplayer.handleNetworksEvents()
 
@@ -57,15 +70,34 @@ class Game:
             elif actionType == pygame.KEYDOWN:
                 if obj == pygame.K_ESCAPE:
                     self.isGameRunning = False
+                elif obj == pygame.K_SPACE:
+                    self.mdata.fire(self.FIRING_TIME)
 
-        # Save action
+        # Get player action
+        dx = 0
+        dy = 0
+
+        if self.inputs.getKeyDown(pygame.K_LEFT):
+            dx = -self.MOVE
+        if self.inputs.getKeyDown(pygame.K_RIGHT):
+            dx += self.MOVE
+        if self.inputs.getKeyDown(pygame.K_UP):
+            dy = -self.MOVE
+        if self.inputs.getKeyDown(pygame.K_DOWN):
+            dy += self.MOVE
+
+        if dx != 0 or dy != 0:
+            self.mdata.move(dx, dy)
+
         pass
 
     def display(self):
-        pass
+        self.graphics.clear()
+        self.graphics.displayScene(self.mdata.myPerson, self.mdata.persons)
+        self.graphics.flip()
 
     def update(self, dt):
-        self.updateMultiplayer()
+        self.updateMultiplayer(dt)
         self.updateIA(dt)
 
     def run(self, dt):
@@ -131,4 +163,10 @@ GérerInterfaces // Gérer les interfaces clavier
 GestionAction // Gestion des action de l'interface
 Affichage // Affichage du jeu
 Afficher le scores
+
+
+Gestion des limites
+Gestion de l'IA
+Gestion des collisions/tirs
+Changement de joueur lorsqu'une personne meurt
 """
