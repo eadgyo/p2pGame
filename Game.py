@@ -1,7 +1,7 @@
 from Multiplayer import Multiplayer
 from Graphics import Graphics
 from Inputs import Inputs
-from time import time
+import time
 import pygame
 
 class Game:
@@ -20,19 +20,19 @@ class Game:
         self.graphics.createWindow(self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT)
         self.isGameRunning = True
 
-        t = time()
+        t = time.time()
         while self.isGameRunning:
             dt, t = self.getDt(t)
             self.run(dt)
             self.sleep(dt)
 
     def sleep(self, t):
-        startTime = time()
-        while time() - startTime < t:
-            time.sleep(10)
+        startTime = time.time()
+        while time.time() - startTime < t:
+            time.sleep(0.001)
 
     def getDt(self, lastTime):
-        t = time()
+        t = time.time()
         dt = t - lastTime
         return dt, t
 
@@ -43,7 +43,7 @@ class Game:
         # Multiplayer synchro
         self.multiplayer.handleGameEvents()
 
-    def updateIA(self):
+    def updateIA(self, dt):
         pass
 
     def handleInputs(self):
@@ -54,6 +54,9 @@ class Game:
         for (actionType, obj) in actionKeys:
             if actionType == pygame.QUIT:
                 self.isGameRunning = False
+            elif actionType == pygame.KEYDOWN:
+                if obj == pygame.K_ESCAPE:
+                    self.isGameRunning = False
 
         # Save action
         pass
@@ -66,7 +69,7 @@ class Game:
         self.updateIA(dt)
 
     def run(self, dt):
-        self.update(self, dt)
+        self.update(dt)
         self.display()
         self.handleInputs()
 

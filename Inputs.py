@@ -3,7 +3,7 @@ import pygame
 
 class Inputs:
     def __init__(self):
-        self.NUMBER_KEY = 128
+        self.NUMBER_KEY = 1024
         self.wasPressed = [False]*self.NUMBER_KEY
         self.isDown = [False]*self.NUMBER_KEY
         self.isLeaving = True
@@ -12,17 +12,17 @@ class Inputs:
         actionKey = []
         for event in pygame.event.get():
 
-            if event.type == event.KEYDOWN:
-                actionKey.append((event.KEYDOWN, event.key))
+            if event.type == pygame.KEYDOWN:
+                actionKey.append((pygame.KEYDOWN, event.key))
                 self.setKeyDown(event.key, True)
                 self.setKeyPressed(event.key, True)
 
-            elif event.type == event.KEYUP:
-                actionKey.append((event.KEYDOWN, event.key))
+            elif event.type == pygame.KEYUP:
+                actionKey.append((pygame.KEYDOWN, event.key))
                 self.setKeyDown(event.key, False)
 
             elif event.type == pygame.QUIT:
-                actionKey.append((event.quit, None))
+                actionKey.append((pygame.QUIT, None))
 
         return actionKey
 
