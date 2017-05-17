@@ -46,7 +46,7 @@ class Game:
         while self.isGameRunning:
             dt, t = self.getDt(t)
             self.run(dt)
-            self.sleepTo(t + dt)
+            #self.sleepTo(t + dt)
 
     def sleepTo(self, t):
         while t - time.time() > 0:
@@ -122,8 +122,10 @@ class Game:
         self.graphics.flip()
 
     def update(self, dt):
+
         self.updateMultiplayer(dt)
         self.updateIA(dt)
+        self.mdata.event.clear()
 
     def run(self, dt):
         self.update(dt)
