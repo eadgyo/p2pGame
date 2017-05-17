@@ -41,7 +41,7 @@ class Game:
                 self.notify(player_socket, Message.OK | Message.PORT, self.port)
                 while n:
                     player_socket, addr = self.socket.accept()
-                    self.notify(player_socket, Message.OK | Message.ID, self.id)
+                    self.notify(player_socket, Message.OK | Message.ID, None)
                     message = self.receive(player_socket)
                     if message.type & Message.OK and message.type & Message.INT:
                         self.players_socket[message.id] = player_socket
@@ -52,13 +52,13 @@ class Game:
         else:
             self.players_socket[self.n] = player_socket
 
-    def diconnect(self):
-        self.notifyAll(Message.OK | Message.DISCONNECT | Message.STRING, "Disconnecting...")
+    def disconnect(self):
         self.socket.close()
-        for s in self.players_socket:
-            s.sock.shutdown(socket.SHUT_RDWR)
+        self.notifyAll(Message.OK | Message.DISCONNECT | Message.STRING, "Disconnecting...")
+        for s in self.players_socket.values():
+            s.shutdown(socket.SHUT_WR)
         while len(self.players_socket):
-            pass
+            self.handleMessages(self.handleDisconnected)
 
         self.running = False
 
@@ -70,14 +70,15 @@ class Game:
 
     def run(self):
         self.running = True
-
         t = threading.Thread(target=self.handleInput)
         t.start()
 
         while self.running:
             self.handleConnections()
-            self.handleMessages()
+            self.handleMessages(self.handleMessage)
             self.handleInputs()
+
+        t.join()
 
     # HANDLER
 
@@ -88,7 +89,7 @@ class Game:
     def handleInputs(self):
         if self.input != '':
             if self.input == "Close":
-                self.diconnect()
+                self.disconnect()
             else:
                 self.notifyAll(Message.OK | Message.STRING, self.input)
                 self.input = ''
@@ -110,13 +111,14 @@ class Game:
         message = self.receive(player_socket)
         if message.type & Message.OK:
             if message.type & Message.CONNECT:
+                self.n += 1
                 (host, port) = message.data
                 self.connect(host, port, False)
-                self.n += 1
             elif message.type & Message.DISCONNECT:
-                pass
-            elif message.type & Message.DISCONNECTED:
-                pass
+                self.notify(player_socket, Message.OK | Message.DISCONNECTED, None)
+                player_socket.shutdown(socket.SHUT_RDWR)
+                player_socket.close()
+                del self.players_socket[message.id]
             elif message.type & Message.ID:
                 self.notify(player_socket, Message.OK | Message.INT, self.id)
             elif message.type & Message.PORT:
@@ -126,12 +128,18 @@ class Game:
             #elif message.type & Message.STRING:
             #    print(message)
 
-    def handleMessages(self):
+    def handleDisconnected(self, player_socket):
+        message = self.receive(player_socket)
+        if message.type & Message.OK and message.type & Message.DISCONNECTED:
+            player_socket.close()
+            del self.players_socket[message.id]
+
+    def handleMessages(self, f):
         players_socket = []
         try:
             players_socket, wlist, xlist = select.select(list(self.players_socket.values()) + list(self.players_socket_awaiting.values()), [], [], 0.05)
             for player_socket in players_socket:
-                self.handleMessage(player_socket)
+                f(player_socket)
         except select.error as e:
             print(e)
 
@@ -149,14 +157,14 @@ class Game:
 
     def notifyAll(self, type, data):
         self.notifySome(self.players_socket.values(), type, data)
-    
+
     def receive(self, s):
         BUFFER_SIZE = 4096
         data = b''
         while True:
             data += s.recv(BUFFER_SIZE)
             if not data:
-                return Message(0, Message.ERROR, '')
+                return Message(0, Message.ERROR, None)
             else:
                 if data.endswith(b'.'):
                     m = pickle.loads(data)

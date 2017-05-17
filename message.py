@@ -31,5 +31,5 @@ class Message:
         self.data = data
 
     def __str__(self):
-        return "[MESSAGE from {}] {} -> {}".format(self.id, " | ".join([Message.TO_STRING[k] for k in Message.TO_STRING.keys() if self.type & k]), self.data)
+        return "[MESSAGE from {}] {}{}".format(self.id, " | ".join([Message.TO_STRING[k] for k in Message.TO_STRING.keys() if self.type & k]), " -> {}".format(self.data) if self.data else '')
 
