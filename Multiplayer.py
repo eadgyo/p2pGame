@@ -18,4 +18,5 @@ class Multiplayer:
 		pass
 
 	def handleGameEvents(self):
+		# Handle firing
 		pass

@@ -1,6 +1,9 @@
 from Game import Game
 
-game = Game()
+def main():
+    game = Game()
 
-game.solo()
-game.start()
+    game.solo()
+    game.start()
+
+if __name__ == '__main__': main()

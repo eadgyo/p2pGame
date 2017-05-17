@@ -24,7 +24,7 @@ class Game:
         self.mdata.me = Owner("Jacky")
         self.mdata.owners.append(self.mdata.me)
 
-        persons = self.mdata.createPersons(0, 2, Constants.WIDTH, Constants.HEIGHT)
+        persons = self.mdata.createPersons(0, 60, Constants.WIDTH, Constants.HEIGHT)
         self.mdata.persons += persons
         self.mdata.myPerson = self.mdata.persons[0]
 
@@ -36,7 +36,10 @@ class Game:
         self.mdata.myPerson.behavior = Behavior()
 
     def start(self):
+
         self.graphics.createWindow(Constants.WIDTH, Constants.HEIGHT)
+        print("Name : " + self.graphics.ask("Nom"))
+        print("IP: " + self.graphics.ask("IP"))
         self.isGameRunning = True
 
         t = time.time()
@@ -70,6 +73,7 @@ class Game:
     def fire(self):
         if self.mdata.myPerson.state == State.ALIVE:
             self.mdata.fire(Constants.FIRING_TIME)
+
 
     def updatePos(self, dt):
         dx = 0

@@ -1,6 +1,7 @@
 import pygame
 from Person import *
 import Constants
+import Inputbox
 
 class Graphics:
 
@@ -13,6 +14,8 @@ class Graphics:
         self.screen = pygame.display.set_mode((width, height))
         self.clear()
 
+    def ask(self, str):
+        return Inputbox.ask(self.screen, str)
 
     def clear(self):
         self.screen.fill(Constants.white)
