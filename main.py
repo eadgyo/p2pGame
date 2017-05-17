@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import server
 from game import *
 
 """
