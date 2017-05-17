@@ -68,6 +68,7 @@ class MData:
         collisions = self.detectCollisions(dt)
         for collision in collisions:
             collision[1].state = State.DEAD
+            self.event.append(collision[0].killEvent(collision[1]))
             self.event.append(collision[1].stateEvent())
 
     def detectCollisions(self, dt):

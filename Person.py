@@ -41,6 +41,9 @@ class Person:
     def stateEvent(self):
         return "person:{id=" + str(self.id) + ",state=" + str(self.state) + "}"
 
+    def killEvent(self, killed):
+        return "kill:{" + str(self.id) + ","  + str(killed.id) + "}"
+
     def isColliding(self, otherPerson, r1, r2):
         distance = math.sqrt(pow(otherPerson.x - self.x, 2) + pow(otherPerson.y - self.y, 2))
         return distance < r1 + r2
