@@ -12,6 +12,9 @@ class Message:
     ID              = 1 << 6
     STRING          = 1 << 7
     INT             = 1 << 8
+    POS             = 1 << 9
+    SHOOT           = 1 << 10
+    DEAD            = 1 << 11
 
     TO_STRING = {
         OK: "OK",
@@ -22,7 +25,10 @@ class Message:
         PORT: "PORT",
         ID: "ID",
         STRING: "STRING",
-        INT: "INT"
+        INT: "INT",
+        POS: "POS",
+        SHOOT: "SHOOT",
+        DEAD: "DEAD"
     }
 
     def __init__(self, id, type, data):
