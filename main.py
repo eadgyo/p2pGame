@@ -9,8 +9,8 @@ def main():
 
     b = input("Start new game ? ")
 
-    if b == 'y':
-        n = int(input("Number of players ? "))
+    if len(b) and b.lower()[0] == 'y':
+        n = int(input("Number of entities ? "))
         game.new(n)
     else:
         ip = input("Server hostname ? ")
