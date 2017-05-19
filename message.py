@@ -30,7 +30,7 @@ class Message:
         INIT: "INIT",
         PORT: "PORT",
         ID: "ID",
-        POS: "POS",
+        MOVE: "MOVE",
         SHOOT: "SHOOT",
         DEAD: "DEAD",
         SCORE: "SCORE",

@@ -48,14 +48,14 @@ class Graphics:
         ren = self.font.render(text, True, fc, bc)
         self.screen.blit(ren, pos)
 
-    def displayTopScore(self, owners):
+    def displayTopScore(self, player):
         x = 5
         y = 0
         self.drawText("Scores: ", (x, y), Constant.black, None)
         y += Constant.FONT_SPACING_Y
         x += 2
-        for owner in owners:
-            self.drawText(owner.name + ": " + str(owner.score), (x, y), Constant.black, None)
+        for player in player.values():
+            self.drawText(player.name + " : " + str(player.score), (x, y), Constant.black, None)
 
     def displayOverlay(self, vel, height):
         x = 5

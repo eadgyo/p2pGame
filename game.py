@@ -10,18 +10,12 @@ from constant   import Constant
 from input      import Input
 from message    import Message
 from graphics   import Graphics
+from player     import Player
 from entity     import Entity
 
-#from mData import MData
-#from ia import IA
-#from owner import Owner
-#from person import Person
-
 class Game:
-    def __init__(self, name, port):
+    def __init__(self, port):
         self.running = False
-
-        self.name = name
 
         self.pid = 0
         self.pids = []
@@ -29,20 +23,15 @@ class Game:
         self.nbPlayer = 0
         self.players = {}
 
-        self.nbEntity = 0
         self.entities = {}
 
-        self.events = []
+        self.moves = []
+        self.shoot = False
+        self.deads = []
 
         self.input = Input()
         self.graphics = Graphics()
         self.velocity = Constant.VELOCITY
-
-        #self.mdata = MData(Constants.WIDTH, Constants.HEIGHT)
-
-        #self.mdata.me = Owner(name)
-        #self.mdata.owners.append(self.mdata.me)
-        #self.velocity = Constants.VELOCITY
 
         self.id = 0
         self.port = port
@@ -55,74 +44,76 @@ class Game:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.listen(5)
 
-    def init(self, nbEntity, nbPlayer = 1, pids = None):
+    def init(self, name, nbEntity, nbPlayer = 1, pids = None):
         self.id = nbPlayer
+        self.players[self.id] = Player(name)
+
         self.nbPlayer = nbPlayer
-        self.nbEntity = nbEntity
+
         self.pids = pids if pids else list(range(1, nbEntity + 1))
         self.pid = self.pids[random.randrange(len(self.pids))]
         self.pids.remove(self.pid)
 
-        #persons = self.mdata.createPersons(1, numberOfPlayers, Constants.WIDTH, Constants.HEIGHT)
-        #self.mdata.persons += persons
-        #self.mdata.myPerson = self.mdata.persons[0]
-
-        # Assign person to me
-        #for numberOfPlayers in range(len(persons)):
-        #    persons[i].behavior = BehaviorRNG()
-        #    persons[i].owner = self.mdata.me
-
-        #self.mdata.myPerson.behavior = Behavior()
-
-    def connect(self, ip, port, new = True):
+    def connect(self, ip, port, name):
         print("Connecting to ({}, {})...".format(ip, port))
         player_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         player_socket.connect((ip, port))
+        message = self.receive(player_socket)
+        if message.type & Message.OK and message.type & Message.INIT:
+            (nbPlayer, pids, entities) = message.data
+            self.init(name, 0, nbPlayer, pids)
+            for (pid, position) in entities:
+                self.entities[pid] = self.entity(position.x, position.y)
 
-        if new:
-            message = self.receive(player_socket)
-            if message.type & Message.OK and message.type & Message.INIT:
-                (nbEntity, nbPlayer, pids, entities) = message.data
-                self.init(nbEntity, nbPlayer, pids)
-                for (pid, position) in entities:
-                    self.entities[pid] = self.entity(position.x, position.y)
+            n = nbPlayer - 2
+            self.players_socket[message.id] = player_socket
+            self.notify(player_socket, Message.OK | Message.PORT, self.port)
+            while n:
+                player_socket, addr = self.socket.accept()
+                self.notify(player_socket, Message.OK | Message.ID, None)
+                message = self.receive(player_socket)
+                if message.type & Message.OK and message.type & Message.ID:
+                    self.players_socket[message.id] = player_socket
+                else:
+                    print("Can't join")
+                    self.disconnect()
+                    return
+                n -= 1
+            self.run()
 
-                n = nbPlayer - 2
-                self.players_socket[message.id] = player_socket
-                self.notify(player_socket, Message.OK | Message.PORT, self.port)
-                while n:
-                    player_socket, addr = self.socket.accept()
-                    self.notify(player_socket, Message.OK | Message.ID, None)
-                    message = self.receive(player_socket)
-                    if message.type & Message.OK and message.type & Message.INT:
-                        self.players_socket[message.id] = player_socket
-                    else:
-                        print("Can't join")
-                        self.disconnect()
-                        return
-                    n -= 1
-                self.run()
-        else:
-            self.players_socket[self.nbPlayer] = player_socket
+    def connectTo(self, ip, port):
+        print("Connecting to ({}, {})...".format(ip, port))
+        player_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        player_socket.connect((ip, port))
+        self.players_socket[self.nbPlayer] = player_socket
 
     def disconnect(self):
         print("Disconnecting...")
 
         self.socket.close()
-        self.notifyAll(Message.OK | Message.DISCONNECT | Message.STRING, "Disconnecting...")
-        for s in self.players_socket.values():
-            s.shutdown(socket.SHUT_WR)
-        while len(self.players_socket):
-            self.handleMessages(self.handleDisconnected)
+
+        if self.nbPlayer > 1:
+            player_socket = next(iter(self.players_socket.values()))
+            data = [(pid, entity.position) for (pid, entity) in self.entities.items()]
+            self.notify(player_socket, Message.OK | Message.MOVE, data)
+            time.sleep(0.05) # NEEDED : Wait at least one loop from the remote player
+            self.notify(player_socket, Message.OK | Message.INIT, self.pids + [self.pid])
+            time.sleep(0.05)
+            self.notifyAll(Message.OK | Message.DISCONNECT | Message.STRING, "Disconnecting...")
+            for s in self.players_socket.values():
+                s.shutdown(socket.SHUT_WR)
+            while len(self.players_socket):
+                self.handleMessages(self.handleDisconnected)
+
         self.running = False
 
         print("Disconnected")
 
-    def new(self, nbEntity):
+    def new(self, name, nbEntity):
         print("Game created")
         print("Listening on port", self.port)
 
-        self.init(nbEntity)
+        self.init(name, nbEntity)
         for i in range(1, nbEntity + 1):
             self.entities[i] = self.entity(random.randrange(Constant.WIDTH), random.randrange(Constant.HEIGHT))
         self.run()
@@ -138,23 +129,19 @@ class Game:
 
             self.handleConnections()
             self.handleMessages(self.handleMessage)
-
+            self.clear()
             self.handleInputs(dt)
-
             self.update(dt)
+            self.sendMessages()
             self.render()
-
-            #self.mdata.update(dt)
-            #self.updateIA(dt)
-            #self.mdata.event.clear()
 
     # NETWORK HANDLER
 
     def handleConnection(self, connection):
         player_socket, addr = connection.accept()
         self.nbPlayer += 1
-        player_pids, self.pids = self.pids[:len(self.pids)//2], self.pids[len(self.pids)//2:]
-        data = (self.nbEntity, self.nbPlayer, player_pids, [(pid, self.entities[pid].position) for pid in player_pids])
+        player_pids, self.pids = self.pids[:len(self.pids)//2+1], self.pids[len(self.pids)//2+1:]
+        data = (self.nbPlayer, player_pids, [(pid, self.entities[pid].position) for pid in player_pids])
         self.notify(player_socket, Message.OK | Message.INIT, data)
         self.players_socket_awaiting[self.nbPlayer] = player_socket
 
@@ -171,18 +158,28 @@ class Game:
             if message.type & Message.CONNECT:
                 self.nbPlayer += 1
                 (host, port) = message.data
-                self.connect(host, port, False)
+                self.connectTo(host, port)
+            elif message.type & Message.INIT:
+                self.pids.extend(message.data)
             elif message.type & Message.DISCONNECT:
+                self.nbPlayer -= 1
                 self.notify(player_socket, Message.OK | Message.DISCONNECTED, None)
                 player_socket.shutdown(socket.SHUT_RDWR)
                 player_socket.close()
                 del self.players_socket[message.id]
             elif message.type & Message.ID:
-                self.notify(player_socket, Message.OK | Message.INT, self.id)
+                self.notify(player_socket, Message.OK | Message.ID, None)
             elif message.type & Message.PORT:
-                self.notifySome(self.players_socket.values(), Message.OK | Message.CONNECT, (player_socket.getpeername()[0], message.data))
+                self.notifyAll(Message.OK | Message.CONNECT, (player_socket.getpeername()[0], message.data))
                 self.players_socket[message.id] = self.players_socket_awaiting[message.id]
                 del self.players_socket_awaiting[message.id]
+            elif message.type & Message.MOVE:
+                for (pid, position) in message.data:
+                    if pid in self.entities:
+                        self.entities[pid].position = position
+                    else:
+                        self.entities[pid] = self.entity(position.x, position.y)
+
             #elif message.type & Message.STRING:
             #    print(message)
 
@@ -200,7 +197,8 @@ class Game:
                 for player_socket in players_socket:
                     f(player_socket)
             except select.error as e:
-                print(e)
+                #print(e)
+                pass
 
     # GAME HANDLER
 
@@ -238,12 +236,14 @@ class Game:
 
         if dx != 0 or dy != 0:
             self.entities[self.pid].move(dx, dy, Constant.WIDTH, Constant.HEIGHT)
+            self.moves.append(self.pid)
 
     # NETWORK UTILITY
 
     def notify(self, player, type, data):
         try:
             player.sendall(pickle.dumps(Message(self.id, type, data)))
+            print("Sending -> ", Message(self.id, type, data))
         except:
             pass
 
@@ -267,6 +267,11 @@ class Game:
                     print(m)
                     return m
 
+    def sendMessages(self):
+        if len(self.moves):
+            data = [(pid, self.entities[pid].position) for pid in self.moves]
+            self.notifyAll(Message.OK | Message.MOVE, data)
+
     # GAME UTILITY
 
     def getDt(self, lastTime):
@@ -277,25 +282,23 @@ class Game:
     def entity(self, x, y):
         return Entity(x, y, (random.randrange(256), random.randrange(256), random.randrange(256)))
 
+    def clear(self):
+        self.moves.clear()
+        self.deads.clear()
+
     def update(self, dt):
-        self.events.clear()
-        for id in self.pids:
-            if self.entities[id].behave(dt, Constant.WIDTH, Constant.HEIGHT):
-                #self.events.append((id, Event.MOVE))
-                pass
+        for pid in self.pids:
+            if self.entities[pid].behave(dt, Constant.WIDTH, Constant.HEIGHT):
+                self.moves.append(pid)
 
     def render(self):
         self.graphics.clear()
         self.graphics.renderEntities(self.entities)
-        #self.graphics.displayScene(self.mdata.myPerson, self.mdata.persons)
-        #self.graphics.displayTopScore(self.mdata.owners)
+        self.graphics.displayTopScore(self.players)
         self.graphics.displayOverlay(Constant.VELOCITY, Constant.HEIGHT)
         self.graphics.flip()
 
     def fire(self):
         if self.mdata.myPerson.state == State.ALIVE:
             self.mdata.fire(Constants.FIRING_TIME)
-
-    def updateIA(self, dt):
-        self.mdata.handlePersons(dt)
 
