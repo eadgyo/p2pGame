@@ -1,6 +1,7 @@
 from Person import *
 import Constants
 from random import randint
+
 class Firing:
     def __init__(self, person, t):
         self.person = person
@@ -104,6 +105,3 @@ class MData:
             if isMoving:
                 self.moveTo(pos, person)
 
-
-    # def handlePersons
-    # Assign persons to owner

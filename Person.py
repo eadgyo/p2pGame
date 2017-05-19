@@ -1,11 +1,7 @@
-from enum import Enum
 import math
-import Constants
 
-class State(Enum):
-    ALIVE = 1
-    DEAD = 2
-    FIRING = 3
+from constant import Constant
+from state import State
 
 class Person:
     def __init__(self, id, x=0, y=0, color=(255,255,255), state=State.ALIVE):
@@ -53,3 +49,4 @@ class Person:
 
     def getPosInt(self):
         return (int(self.x), int(self.y))
+
