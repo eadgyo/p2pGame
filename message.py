@@ -3,6 +3,8 @@
 import pickle
 
 class Message:
+    NOTHING         = 0
+
     OK              = 1 << 0
     ERROR           = 1 << 1
     CONNECT         = 1 << 2
@@ -12,14 +14,15 @@ class Message:
     INIT            = 1 << 5
     PORT            = 1 << 6
     ID              = 1 << 7
+    DONE            = 1 << 8
 
-    MOVE            = 1 << 8
-    SHOOT           = 1 << 9
-    DEAD            = 1 << 10
-    SCORE           = 1 << 11
+    MOVE            = 1 << 9
+    SHOOT           = 1 << 10
+    DEAD            = 1 << 11
+    SCORE           = 1 << 12
 
-    STRING          = 1 << 12
-    INT             = 1 << 13
+    STRING          = 1 << 13
+    INT             = 1 << 14
 
     TO_STRING = {
         OK: "OK",
@@ -30,6 +33,7 @@ class Message:
         INIT: "INIT",
         PORT: "PORT",
         ID: "ID",
+		DONE: "DONE",
         MOVE: "MOVE",
         SHOOT: "SHOOT",
         DEAD: "DEAD",

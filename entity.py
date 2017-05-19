@@ -1,4 +1,5 @@
 import random
+import math
 
 from constant import Constant
 from position import Position
@@ -72,4 +73,7 @@ class Entity:
             self.destination = Position(int(self.start.x + self.vec.x * Constant.VELOCITY * self.moveDuration), int(self.start.y + self.vec.y * Constant.VELOCITY * self.moveDuration))
 
         return startMoving
+
+    def collide(self, entity, r1, r2):
+        return math.sqrt(pow(entity.position.x - self.position.x, 2) + pow(entity.position.y - self.position.y, 2)) < r1 + r2
 

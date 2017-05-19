@@ -25,9 +25,17 @@ class Graphics:
     def flip(self):
         pygame.display.flip()
 
-    def renderEntities(self, entities):
-        for entity in entities.values():
-            pygame.draw.circle(self.screen, entity.color, (entity.position.x, entity.position.y), Constant.DEFAULT_RADIUS, 0)
+    def renderEntities(self, entities, me, fire, shoots):
+        for pid, entity in entities.items():
+            if (pid == me and fire) or pid in shoots:
+                radius = Constant.FIRING_RADIUS
+            else:
+                radius = Constant.DEFAULT_RADIUS
+            pygame.draw.circle(self.screen, Constant.DEFAULT_COLOR, (entity.position.x, entity.position.y), radius, 0)
+            pygame.draw.circle(self.screen, entity.color, (entity.position.x, entity.position.y), radius, 2)
+
+        p = entities[me].position
+        pygame.draw.circle(self.screen, Constant.red, (p.x, p.y), 3, 0)
 
     def displayScene(self, myPerson, persons):
         # Render all players
@@ -37,8 +45,6 @@ class Graphics:
                     radius = Constant.DEFAULT_RADIUS
                 else:
                     radius = Constant.FIRING_RADIUS
-                pygame.draw.circle(self.screen, Constant.DEFAULT_COLOR, person.getPosInt(), radius, 0)
-                pygame.draw.circle(self.screen, person.color, person.getPosInt(), radius, 2)
 
         # Render person player
         if myPerson.state != State.DEAD:

@@ -27,7 +27,9 @@ class Game:
 
         self.moves = []
         self.shoot = False
+        self.shoots = []
         self.deads = []
+        self.killed = []
 
         self.input = Input()
         self.graphics = Graphics()
@@ -70,6 +72,7 @@ class Game:
             self.notify(player_socket, Message.OK | Message.PORT, self.port)
             while n:
                 player_socket, addr = self.socket.accept()
+                print("Accepting new connection from", addr)
                 self.notify(player_socket, Message.OK | Message.ID, None)
                 message = self.receive(player_socket)
                 if message.type & Message.OK and message.type & Message.ID:
@@ -78,6 +81,7 @@ class Game:
                     print("Can't join")
                     self.disconnect()
                     return
+                self.notify(player_socket, Message.OK | Message.DONE, None)
                 n -= 1
             self.run()
 
@@ -85,7 +89,7 @@ class Game:
         print("Connecting to ({}, {})...".format(ip, port))
         player_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         player_socket.connect((ip, port))
-        self.players_socket[self.nbPlayer] = player_socket
+        self.players_socket_awaiting[self.nbPlayer] = player_socket
 
     def disconnect(self):
         print("Disconnecting...")
@@ -94,7 +98,7 @@ class Game:
 
         if self.nbPlayer > 1:
             player_socket = next(iter(self.players_socket.values()))
-            data = [(pid, entity.position) for (pid, entity) in self.entities.items()]
+            data = [[(pid, entity.position) for (pid, entity) in self.entities.items()]]
             self.notify(player_socket, Message.OK | Message.MOVE, data)
             time.sleep(0.05) # NEEDED : Wait at least one loop from the remote player
             self.notify(player_socket, Message.OK | Message.INIT, self.pids + [self.pid])
@@ -127,9 +131,9 @@ class Game:
         while self.running:
             dt, t = self.getDt(t)
 
+            self.clear()
             self.handleConnections()
             self.handleMessages(self.handleMessage)
-            self.clear()
             self.handleInputs(dt)
             self.update(dt)
             self.sendMessages()
@@ -173,12 +177,20 @@ class Game:
                 self.notifyAll(Message.OK | Message.CONNECT, (player_socket.getpeername()[0], message.data))
                 self.players_socket[message.id] = self.players_socket_awaiting[message.id]
                 del self.players_socket_awaiting[message.id]
-            elif message.type & Message.MOVE:
-                for (pid, position) in message.data:
+            elif message.type & Message.DONE:
+                self.players_socket[message.id] = self.players_socket_awaiting[message.id]
+                del self.players_socket_awaiting[message.id]
+
+            if message.type & Message.MOVE:
+                for (pid, position) in message.data[0]:
                     if pid in self.entities:
                         self.entities[pid].position = position
                     else:
                         self.entities[pid] = self.entity(position.x, position.y)
+            if message.type & Message.SHOOT:
+                self.shoots.append(message.id)
+            if message.type & Message.DEAD:
+                self.killed.extend(message.data[1])
 
             #elif message.type & Message.STRING:
             #    print(message)
@@ -214,7 +226,7 @@ class Game:
                 if obj == pygame.K_ESCAPE:
                     self.disconnect()
                 elif obj == pygame.K_SPACE:
-                    self.fire()
+                    self.shoot = True
 
         # Get player action
         dx = 0
@@ -243,7 +255,7 @@ class Game:
     def notify(self, player, type, data):
         try:
             player.sendall(pickle.dumps(Message(self.id, type, data)))
-            print("Sending -> ", Message(self.id, type, data))
+            #print("Sending -> ", Message(self.id, type, data))
         except:
             pass
 
@@ -268,9 +280,30 @@ class Game:
                     return m
 
     def sendMessages(self):
+        data = [[], []]
+        data_move = []
+        move = Message.NOTHING
+        data_shoot = []
+        shoot = Message.NOTHING
+        data_deads = []
+        deads = Message.NOTHING
+
         if len(self.moves):
-            data = [(pid, self.entities[pid].position) for pid in self.moves]
-            self.notifyAll(Message.OK | Message.MOVE, data)
+            move = Message.MOVE
+            data[0] = [(pid, self.entities[pid].position) for pid in self.moves]
+        if self.shoot:
+            shoot = Message.MOVE | Message.SHOOT
+            data_shoot = [(self.pid, self.entities[self.pid].position)]
+        if len(self.deads):
+            deads = Message.DEAD
+            data_deads = [pid for pid in self.deads]
+
+        data[0].extend(data_move)
+        data[0].extend(data_shoot)
+        data[1].extend(data_deads)
+
+        if move or shoot or deads:
+            self.notifyAll(Message.OK | move | shoot | deads, data)
 
     # GAME UTILITY
 
@@ -283,22 +316,28 @@ class Game:
         return Entity(x, y, (random.randrange(256), random.randrange(256), random.randrange(256)))
 
     def clear(self):
+        self.shoot = False
         self.moves.clear()
+        self.shoots.clear()
         self.deads.clear()
+        self.killed.clear()
 
     def update(self, dt):
         for pid in self.pids:
             if self.entities[pid].behave(dt, Constant.WIDTH, Constant.HEIGHT):
                 self.moves.append(pid)
+        for pid_shoot in self.shoots:
+            for pid in self.pids:
+                if self.entities[pid].collide(self.entities[pid_shoot], Constant.DEFAULT_RADIUS, Constant.FIRING_RADIUS):
+                    del self.entities[pid]
+                    self.deads.append(pid)
+        for pid in self.killed:
+            del self.entities[pid]
 
     def render(self):
         self.graphics.clear()
-        self.graphics.renderEntities(self.entities)
+        self.graphics.renderEntities(self.entities, self.pid, self.shoot, self.shoots)
         self.graphics.displayTopScore(self.players)
         self.graphics.displayOverlay(Constant.VELOCITY, Constant.HEIGHT)
         self.graphics.flip()
-
-    def fire(self):
-        if self.mdata.myPerson.state == State.ALIVE:
-            self.mdata.fire(Constants.FIRING_TIME)
 
