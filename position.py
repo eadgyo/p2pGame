@@ -9,4 +9,3 @@ class Position:
 
     def __ne__(self, position):
         return not self.__eq__(position)
-

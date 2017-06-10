@@ -3,8 +3,6 @@ import inputbox
 
 from constant import Constant
 
-from Person import *
-
 class Graphics:
 
     def __init__(self):
@@ -36,19 +34,6 @@ class Graphics:
 
         p = entities[me].position
         pygame.draw.circle(self.screen, Constant.red, (p.x, p.y), 3, 0)
-
-    def displayScene(self, myPerson, persons):
-        # Render all players
-        for person in persons:
-            if person.state != State.DEAD:
-                if person.state == State.ALIVE:
-                    radius = Constant.DEFAULT_RADIUS
-                else:
-                    radius = Constant.FIRING_RADIUS
-
-        # Render person player
-        if myPerson.state != State.DEAD:
-            pygame.draw.circle(self.screen, Constant.red, myPerson.getPosInt(), 3, 0)
 
     def drawText(self, text, pos, fc=(255,255,255), bc=(0,0,0)):
         ren = self.font.render(text, True, fc, bc)
